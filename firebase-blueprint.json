@@ -1,0 +1,262 @@
+{
+  "entities": {
+    "GameAccount": {
+      "title": "GameAccount",
+      "description": "Akun game yang terdaftar di katalog PandirStore (MLBB & Free Fire)",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID unik akun game",
+          "maxLength": 64
+        },
+        "idLapak": {
+          "type": "string",
+          "description": "Kode lapak atau ID akun kustom",
+          "maxLength": 64
+        },
+        "accountId": {
+          "type": "string",
+          "description": "ID akun yang ditentukan penjual",
+          "maxLength": 64
+        },
+        "game": {
+          "type": "string",
+          "description": "Kategori game (MLBB atau FREE_FIRE)",
+          "enum": ["MLBB", "FREE_FIRE"]
+        },
+        "title": {
+          "type": "string",
+          "description": "Judul lapak akun",
+          "maxLength": 150
+        },
+        "price": {
+          "type": "number",
+          "description": "Harga jual akun"
+        },
+        "costPrice": {
+          "type": "number",
+          "description": "Harga modal (COGS) akun"
+        },
+        "discountPrice": {
+          "type": "number",
+          "description": "Harga coret/diskon"
+        },
+        "stock": {
+          "type": "number",
+          "description": "Jumlah stok akun"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status ketersediaan stok",
+          "enum": ["READY", "SOLD_OUT", "BOOKED"]
+        },
+        "isNego": {
+          "type": "boolean",
+          "description": "Apakah harga bisa dinegosiasikan"
+        },
+        "whatsappNumber": {
+          "type": "string",
+          "description": "Nomor WhatsApp admin",
+          "maxLength": 25
+        },
+        "rating": {
+          "type": "number",
+          "description": "Rating lapak"
+        },
+        "soldCount": {
+          "type": "number",
+          "description": "Jumlah transaksi sukses"
+        },
+        "thumbnail": {
+          "type": "string",
+          "description": "URL thumbnail utama gambar akun"
+        },
+        "gallery": {
+          "type": "array",
+          "description": "Daftar foto screenshot galeri akun"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Catatan tambahan penjual"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Waktu pembuatan dalam milidetik"
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Waktu pembaruan terakhir dalam milidetik"
+        }
+      },
+      "required": ["id", "game", "title", "price", "stock", "status"]
+    },
+    "SaleRecord": {
+      "title": "SaleRecord",
+      "description": "Catatan transaksi penjualan akun untuk kalkulasi laba/rugi",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID transaksi penjualan",
+          "maxLength": 64
+        },
+        "accountId": {
+          "type": "string",
+          "description": "ID akun yang terjual",
+          "maxLength": 64
+        },
+        "accountTitle": {
+          "type": "string",
+          "description": "Judul akun terjual"
+        },
+        "game": {
+          "type": "string",
+          "description": "Game akun yang terjual"
+        },
+        "sellingPrice": {
+          "type": "number",
+          "description": "Harga jual aktual"
+        },
+        "costPrice": {
+          "type": "number",
+          "description": "Harga modal (COGS)"
+        },
+        "profit": {
+          "type": "number",
+          "description": "Laba kotor per transaksi"
+        },
+        "date": {
+          "type": "number",
+          "description": "Waktu transaksi dalam milidetik"
+        }
+      },
+      "required": ["id", "accountId", "accountTitle", "sellingPrice", "profit", "date"]
+    },
+    "PaymentSettings": {
+      "title": "PaymentSettings",
+      "description": "Konfigurasi metode pembayaran dinamis SeaBank & QRIS",
+      "type": "object",
+      "properties": {
+        "seabank_account_number": {
+          "type": "string",
+          "description": "Nomor rekening SeaBank admin"
+        },
+        "seabank_account_name": {
+          "type": "string",
+          "description": "Nama pemilik rekening SeaBank"
+        },
+        "seabank_is_active": {
+          "type": "boolean",
+          "description": "Status aktif metode SeaBank"
+        },
+        "qris_image_url": {
+          "type": "string",
+          "description": "URL gambar barcode QRIS merchant"
+        },
+        "qris_merchant_name": {
+          "type": "string",
+          "description": "Nama merchant QRIS"
+        },
+        "qris_max_amount": {
+          "type": "number",
+          "description": "Batas nominal maksimal pembayaran via QRIS"
+        },
+        "qris_is_active": {
+          "type": "boolean",
+          "description": "Status aktif metode QRIS"
+        },
+        "updated_at": {
+          "type": "number",
+          "description": "Timestamp pembaruan terakhir"
+        }
+      },
+      "required": ["seabank_account_number", "seabank_is_active", "qris_is_active"]
+    },
+    "OrderTransaction": {
+      "title": "OrderTransaction",
+      "description": "Pesanan pembelian akun game dari checkout pembeli dengan kode unik dan validasi nominal",
+      "type": "object",
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "description": "ID unik pesanan (e.g. ORD-123456)",
+          "maxLength": 64
+        },
+        "product_id": {
+          "type": "string",
+          "description": "ID akun game yang dipesan",
+          "maxLength": 64
+        },
+        "product_title": {
+          "type": "string",
+          "description": "Judul akun game"
+        },
+        "base_price": {
+          "type": "number",
+          "description": "Harga dasar akun"
+        },
+        "unique_code": {
+          "type": "number",
+          "description": "Kode unik 3 digit 100-999"
+        },
+        "total_amount": {
+          "type": "number",
+          "description": "Total tagihan resmi (base_price + unique_code)"
+        },
+        "claimed_amount": {
+          "type": "number",
+          "description": "Nominal yang ditransfer pembeli"
+        },
+        "proof_of_payment_url": {
+          "type": "string",
+          "description": "URL bukti transfer"
+        },
+        "sender_name": {
+          "type": "string",
+          "description": "Nama pemilik rekening pengirim"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status approval pesanan",
+          "enum": ["PENDING", "PAID_APPROVED", "REJECTED_UNDERPAID", "CANCELLED", "MENUNGGU_VERIFIKASI", "TERVERIFIKASI", "DITOLAK"]
+        },
+        "created_at": {
+          "type": "number",
+          "description": "Waktu checkout pesanan dibuat"
+        },
+        "updated_at": {
+          "type": "number",
+          "description": "Waktu status terakhir diperbarui"
+        }
+      },
+      "required": ["order_id", "product_id", "base_price", "unique_code", "total_amount", "claimed_amount", "sender_name", "status"]
+    }
+  },
+  "firestore": {
+    "/akun_toko_game/{accountId}": {
+      "schema": {
+        "$ref": "#/entities/GameAccount"
+      },
+      "description": "Koleksi akun marketplace yang tersinkronisasi real-time antar perangkat"
+    },
+    "/catatan_penjualan/{saleId}": {
+      "schema": {
+        "$ref": "#/entities/SaleRecord"
+      },
+      "description": "Koleksi riwayat transaksi penjualan"
+    },
+    "/pengaturan_pembayaran/{configId}": {
+      "schema": {
+        "$ref": "#/entities/PaymentSettings"
+      },
+      "description": "Koleksi konfigurasi pembayaran rekening SeaBank & QRIS dinamis"
+    },
+    "/konfirmasi_pembayaran/{orderId}": {
+      "schema": {
+        "$ref": "#/entities/OrderTransaction"
+      },
+      "description": "Koleksi transaksi pesanan dan konfirmasi bukti bayar pembeli"
+    }
+  }
+}
