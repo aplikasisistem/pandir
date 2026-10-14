@@ -1,4 +1,4 @@
-# Netlify Configuration for PandirStore PWA
+# Netlify Configuration for PandirStore PWA & Serverless Auth
 # Documentation: https://docs.netlify.com/configure-builds/file-based-configuration/
 
 [build]
@@ -12,21 +12,43 @@
   # Avoid peer dependency installation failures on clean CI containers
   NPM_FLAGS = "--legacy-peer-deps"
 
-# Netlify Serverless Functions API Proxy (must precede SPA catch-all)
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# ==============================================================================
+# Netlify Serverless Functions API Proxy Rules (MUST precede SPA catch-all /*)
+# ==============================================================================
+
+# 1. Forward all /api/auth and sub-paths to the serverless auth function
 [[redirects]]
   from = "/api/auth/*"
-  to = "/.netlify/functions/auth/:splat"
+  to = "/.netlify/functions/auth"
   status = 200
 
+[[redirects]]
+  from = "/api/auth"
+  to = "/.netlify/functions/auth"
+  status = 200
+
+# 2. Forward direct /.netlify/functions/auth/* paths to the handler
+[[redirects]]
+  from = "/.netlify/functions/auth/*"
+  to = "/.netlify/functions/auth"
+  status = 200
+
+# ==============================================================================
 # Single Page Application (SPA) redirect rule
 # Ensures client-side routing works for all URLs without 404 errors
+# ==============================================================================
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
+# ==============================================================================
 # Cache-Control headers to ensure immediate updates are visible to visitors
-# Prevents aggressive browser/CDN caching of the application shell and Service Worker
+# ==============================================================================
 
 # 1. Entry HTML must never be cached so users always receive the newest asset bundles
 [[headers]]

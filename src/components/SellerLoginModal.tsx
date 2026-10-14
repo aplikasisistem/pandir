@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Eye, EyeOff, X, ShieldAlert } from 'lucide-react';
+import { Lock, Eye, EyeOff, X, ShieldAlert, Server } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { authService } from '../services/authService';
 
@@ -82,9 +82,11 @@ export const SellerLoginModal: React.FC<SellerLoginModalProps> = ({
 
         {/* Error message */}
         {errorMessage && (
-          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-500/50 text-red-700 dark:text-red-300 text-xs animate-shake">
+          <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-300 dark:border-red-500/50 text-red-700 dark:text-red-300 text-xs animate-shake">
             <ShieldAlert className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
-            <span>{errorMessage}</span>
+            <div className="whitespace-pre-line leading-relaxed font-medium break-words overflow-x-auto w-full">
+              {errorMessage}
+            </div>
           </div>
         )}
 
@@ -148,6 +150,20 @@ export const SellerLoginModal: React.FC<SellerLoginModalProps> = ({
             <Lock className="w-4 h-4" />
             <span>{isSubmitting ? 'Memeriksa Kredensial...' : t('seller_btn')}</span>
           </button>
+
+          {/* Active API Target Server Indicator */}
+          <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+            <span className="flex items-center gap-1.5 font-medium">
+              <Server className="w-3.5 h-3.5 text-slate-400" />
+              Target Server:
+            </span>
+            <span
+              className="font-mono text-[10px] text-slate-600 dark:text-slate-300 truncate max-w-[210px] bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded"
+              title={authService.getActiveApiBase()}
+            >
+              {authService.getActiveApiBase()}
+            </span>
+          </div>
         </form>
       </div>
     </div>

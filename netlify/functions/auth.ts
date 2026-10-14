@@ -1,14 +1,19 @@
 /**
  * Netlify Serverless Function for PANDIRSTORE.ID Admin Authentication
  *
- * Route: /.netlify/functions/auth (and /api/auth/* via netlify.toml redirect)
+ * Runs 100% natively on Netlify without needing an external Express server.
+ * Handles:
+ * - POST /api/auth/login or /.netlify/functions/auth
+ * - POST /api/auth/verify or /.netlify/functions/auth
+ * - POST /api/auth/logout or /.netlify/functions/auth
+ * - GET  /api/auth (Health check)
  *
  * Security Features:
- * 1. 100% Server-side credential validation against environment variables.
+ * 1. 100% Server-side credential validation against Netlify environment variables.
  * 2. Constant-time string comparison (timingSafeEqual) to prevent timing attacks.
  * 3. Cryptographically signed JWT tokens (HMAC-SHA256) with expiration timestamps.
  * 4. Zero external npm dependencies - uses native Node.js crypto module.
- * 5. Tamper-proof - cannot be bypassed by client console manipulations.
+ * 5. Dynamic CORS origin reflection supporting https://pandirstore.netlify.app.
  */
 
 import crypto from 'crypto';
@@ -24,17 +29,22 @@ const JWT_SECRET =
 const SESSION_DURATION_SECONDS = 12 * 60 * 60;
 
 /**
- * Standard CORS and Security Headers
+ * Dynamic CORS and Security Headers supporting credentials and Netlify origins
  */
-const RESPONSE_HEADERS = {
-  'Content-Type': 'application/json',
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-  Pragma: 'no-cache',
-  Expires: '0',
-};
+function getCorsHeaders(event?: any) {
+  const origin = event?.headers?.origin || event?.headers?.Origin || '*';
+  return {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  };
+}
 
 /**
  * Base64URL encoding/decoding helper
@@ -64,7 +74,6 @@ function safeEqual(a: string, b: string): boolean {
     const bufA = Buffer.from(String(a));
     const bufB = Buffer.from(String(b));
     if (bufA.length !== bufB.length) {
-      // Execute dummy comparison to keep constant time execution
       crypto.timingSafeEqual(bufA, bufA);
       return false;
     }
@@ -151,7 +160,7 @@ function verifyJwt(
     }
 
     return { valid: true, payload };
-  } catch (err) {
+  } catch {
     return { valid: false, error: 'Token verification exception' };
   }
 }
@@ -160,45 +169,62 @@ function verifyJwt(
  * Netlify Function Handler
  */
 export const handler = async (event: any) => {
-  // Handle HTTP OPTIONS for CORS preflight
+  // 1. Handle HTTP OPTIONS for CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 204,
-      headers: RESPONSE_HEADERS,
+      headers: getCorsHeaders(event),
       body: '',
     };
   }
 
-  const rawPath = event.path || '';
+  const rawPath = String(event.path || '').toLowerCase();
   let body: Record<string, any> = {};
 
   if (event.body) {
     try {
-      body = JSON.parse(event.body);
+      body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
     } catch {
       body = {};
     }
   }
 
-  // Determine requested action
-  const action =
-    body.action ||
-    (rawPath.endsWith('/login')
-      ? 'login'
-      : rawPath.endsWith('/verify')
-      ? 'verify'
-      : rawPath.endsWith('/logout')
-      ? 'logout'
-      : 'unknown');
+  // 2. Health check route (GET or explicit health action)
+  if (event.httpMethod === 'GET' || body.action === 'health' || rawPath.endsWith('/health')) {
+    return {
+      statusCode: 200,
+      headers: getCorsHeaders(event),
+      body: JSON.stringify({
+        status: 'ok',
+        service: 'PANDIRSTORE.ID Netlify Auth Function',
+        time: new Date().toISOString(),
+        site: 'https://pandirstore.netlify.app',
+      }),
+    };
+  }
+
+  // 3. Determine requested action intelligently
+  let action = body.action;
+  if (!action) {
+    if (rawPath.includes('login') || (body.username && body.password)) {
+      action = 'login';
+    } else if (rawPath.includes('verify') || body.token || event.headers?.authorization) {
+      action = 'verify';
+    } else if (rawPath.includes('logout')) {
+      action = 'logout';
+    } else {
+      action = 'login'; // Default fallback
+    }
+  }
 
   // ================================================================
-  // 1. ACTION: LOGIN (Server-Side Authentication)
+  // ACTION: LOGIN (Server-Side Authentication)
   // ================================================================
   if (action === 'login') {
     if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
-        headers: RESPONSE_HEADERS,
+        headers: getCorsHeaders(event),
         body: JSON.stringify({ error: 'Method Not Allowed. Use POST.' }),
       };
     }
@@ -209,7 +235,7 @@ export const handler = async (event: any) => {
     if (!inputUser || !inputPass) {
       return {
         statusCode: 400,
-        headers: RESPONSE_HEADERS,
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: 'Username dan Password wajib diisi.',
@@ -227,7 +253,7 @@ export const handler = async (event: any) => {
 
       return {
         statusCode: 401,
-        headers: RESPONSE_HEADERS,
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           success: false,
           error: 'Username atau Password salah! Akses ditolak.',
@@ -251,7 +277,7 @@ export const handler = async (event: any) => {
 
     return {
       statusCode: 200,
-      headers: RESPONSE_HEADERS,
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: true,
         token,
@@ -265,10 +291,9 @@ export const handler = async (event: any) => {
   }
 
   // ================================================================
-  // 2. ACTION: VERIFY (Cryptographic Token Validation)
+  // ACTION: VERIFY (Cryptographic Token Validation)
   // ================================================================
   if (action === 'verify') {
-    // Extract token from Authorization header or request body
     const authHeader =
       event.headers?.authorization || event.headers?.Authorization || '';
     let token = '';
@@ -282,7 +307,7 @@ export const handler = async (event: any) => {
     if (!token) {
       return {
         statusCode: 401,
-        headers: RESPONSE_HEADERS,
+        headers: getCorsHeaders(event),
         body: JSON.stringify({ valid: false, error: 'Token tidak disertakan.' }),
       };
     }
@@ -292,7 +317,7 @@ export const handler = async (event: any) => {
     if (!verification.valid || !verification.payload) {
       return {
         statusCode: 401,
-        headers: RESPONSE_HEADERS,
+        headers: getCorsHeaders(event),
         body: JSON.stringify({
           valid: false,
           error: verification.error || 'Token tidak valid atau kedaluwarsa.',
@@ -302,7 +327,7 @@ export const handler = async (event: any) => {
 
     return {
       statusCode: 200,
-      headers: RESPONSE_HEADERS,
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         valid: true,
         user: {
@@ -315,12 +340,12 @@ export const handler = async (event: any) => {
   }
 
   // ================================================================
-  // 3. ACTION: LOGOUT
+  // ACTION: LOGOUT
   // ================================================================
   if (action === 'logout') {
     return {
       statusCode: 200,
-      headers: RESPONSE_HEADERS,
+      headers: getCorsHeaders(event),
       body: JSON.stringify({ success: true, message: 'Logged out successfully.' }),
     };
   }
@@ -328,9 +353,9 @@ export const handler = async (event: any) => {
   // Fallback for unknown actions
   return {
     statusCode: 404,
-    headers: RESPONSE_HEADERS,
+    headers: getCorsHeaders(event),
     body: JSON.stringify({
-      error: 'Endpoint tidak ditemukan. Gunakan /login, /verify, atau /logout.',
+      error: 'Endpoint tidak ditemukan. Gunakan action: login, verify, logout, atau health.',
     }),
   };
 };
