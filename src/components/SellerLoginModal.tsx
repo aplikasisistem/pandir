@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff, X, ShieldAlert } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { authService } from '../services/authService';
 
 interface SellerLoginModalProps {
   isOpen: boolean;
@@ -22,7 +23,7 @@ export const SellerLoginModal: React.FC<SellerLoginModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setIsSubmitting(true);
@@ -30,19 +31,24 @@ export const SellerLoginModal: React.FC<SellerLoginModalProps> = ({
     const trimmedUser = username.trim();
     const trimmedPass = password.trim();
 
-    setTimeout(() => {
-      if (trimmedUser === 'Pandir' && trimmedPass === 'Pamarayan123@') {
+    try {
+      const result = await authService.login(trimmedUser, trimmedPass);
+
+      if (result.success) {
         setIsSubmitting(false);
         onLoginSuccess();
         onClose();
-        // Clear fields
+        // Clear fields from memory
         setUsername('');
         setPassword('');
       } else {
         setIsSubmitting(false);
-        setErrorMessage('Username atau Password salah! Akses ditolak.');
+        setErrorMessage(result.error || 'Username atau Password salah! Akses ditolak.');
       }
-    }, 250);
+    } catch {
+      setIsSubmitting(false);
+      setErrorMessage('Terjadi kesalahan komunikasi dengan server otentikasi.');
+    }
   };
 
   return (

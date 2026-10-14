@@ -30,6 +30,7 @@ import {
 import { OFFICIAL_WA_NUMBER, DISPLAY_WA_NUMBER } from './utils/formatter';
 import { useToast } from './context/ToastContext';
 import { useLanguage } from './context/LanguageContext';
+import { authService } from './services/authService';
 
 export default function App() {
   const { showToast } = useToast();
@@ -79,13 +80,10 @@ export default function App() {
       setIsInitialLoaded(status.isInitialLoaded);
     });
 
-    // Check saved seller auth session in session storage
-    if (typeof window !== 'undefined') {
-      const savedAuth = sessionStorage.getItem('gamestore_seller_auth');
-      if (savedAuth === 'true') {
-        setIsSellerAuthenticated(true);
-      }
-    }
+    // Verify cryptographic seller session with server
+    authService.verifySession().then((isValid) => {
+      setIsSellerAuthenticated(isValid);
+    });
 
     return () => {
       unsubscribeAccounts();
@@ -171,17 +169,12 @@ export default function App() {
   // Seller auth handlers
   const handleSellerLoginSuccess = () => {
     setIsSellerAuthenticated(true);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('gamestore_seller_auth', 'true');
-    }
     setCurrentView('seller');
   };
 
-  const handleSellerLogout = () => {
+  const handleSellerLogout = async () => {
+    await authService.logout();
     setIsSellerAuthenticated(false);
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('gamestore_seller_auth');
-    }
     setCurrentView('buyer');
   };
 

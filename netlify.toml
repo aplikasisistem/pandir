@@ -4,12 +4,19 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
 
 [build.environment]
   # Force Node.js v22 for full compatibility with Vite 8, React 19, and Tailwind CSS v4
   NODE_VERSION = "22"
   # Avoid peer dependency installation failures on clean CI containers
   NPM_FLAGS = "--legacy-peer-deps"
+
+# Netlify Serverless Functions API Proxy (must precede SPA catch-all)
+[[redirects]]
+  from = "/api/auth/*"
+  to = "/.netlify/functions/auth/:splat"
+  status = 200
 
 # Single Page Application (SPA) redirect rule
 # Ensures client-side routing works for all URLs without 404 errors
